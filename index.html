@@ -9,7 +9,7 @@
   <body>
     <header>
       <h1>Painel Logístico</h1>
-      <p>Cadastro ZLES002, relatório de impressão e produtos estrela.</p>
+      <p>Importação em lote do SAP, relatório por DT e produtos estrela.</p>
     </header>
 
     <nav class="tabs">
@@ -20,56 +20,42 @@
 
     <main>
       <section id="zles002" class="tab-panel active">
-        <h2>Cadastro da Remessa (ZLES002)</h2>
+        <h2>Importação SAP (múltiplas linhas)</h2>
         <div class="sub-card">
           <label>
-            Cole 1 linha do SAP (colunas separadas por TAB, no formato do Excel)
-            <input id="sap-linha" placeholder="Cole aqui a linha completa da remessa" />
+            Cole as linhas do SAP (uma linha por item/remessa)
+            <textarea id="sap-linhas" rows="8" placeholder="Cole aqui várias linhas copiadas do SAP/Excel"></textarea>
           </label>
-          <button id="parse-sap" type="button">Ler linha SAP</button>
-          <p class="hint">Ordem esperada: Cód Cliente, Cód Transportadora, Nº transporte, Inf Agenda, Nome Cliente, Qtde Remessa, Material, Setor, Cliente Pallet, Agrupamento Regional, Qtd Teórica Convertida, Nº NFe, Quantidade Teórica, Data Agendamento.</p>
-          <div id="resumo-cabecalho" class="resumo-cabecalho">Nenhuma linha SAP carregada.</div>
+          <p class="hint">Formato esperado por linha (TAB): Cód Cliente, Cód Transportadora, Nº transporte, Inf Agenda, Nome Cliente, Qtde Remessa, Material, Setor, Cliente Pallet, Agrupamento Regional, Qtd Teórica Convertida, Nº NFe, Quantidade Teórica, Data Agendamento.</p>
+          <button id="importar-sap" type="button" class="primary">Importar linhas SAP</button>
+          <p id="status" aria-live="polite"></p>
         </div>
 
         <div class="sub-card">
-          <div class="row-title">
-            <h3>Itens do Pedido</h3>
-            <button id="add-item" type="button">+ Adicionar item</button>
-          </div>
-          <table id="itens-table">
+          <h3>DTs importadas no navegador</h3>
+          <table>
             <thead>
               <tr>
-                <th>Material (SKU)</th>
-                <th>Quantidade (fardos)</th>
-                <th>Padrão Plt</th>
-                <th>Plt Fechado</th>
-                <th>Fração</th>
-                <th>Ação</th>
+                <th>DT</th>
+                <th>Cliente</th>
+                <th>Itens</th>
+                <th>Total fardos</th>
               </tr>
             </thead>
-            <tbody></tbody>
-            <tfoot>
-              <tr>
-                <td colspan="1"><strong>Total</strong></td>
-                <td id="total-fardos">0</td>
-                <td colspan="4"></td>
-              </tr>
-            </tfoot>
+            <tbody id="resumo-importacao"></tbody>
           </table>
-          <small>Obs: Padrão Plt vem do Supabase (coluna <code>fardos_por_palete</code>) ou pode ser editado manualmente.</small>
         </div>
-
-        <button id="salvar-dados" type="button" class="primary">Salvar dados da DT</button>
-        <p id="status" aria-live="polite"></p>
       </section>
 
       <section id="relatorio" class="tab-panel">
         <h2>Relatório para Impressão</h2>
         <div class="sub-card">
-          <label>Número da DT / Nº transporte
-            <input id="busca-dt" placeholder="Ex.: 23014599" />
+          <label>Pesquisar DT (digite os 4 últimos números)
+            <input id="busca-dt" placeholder="Ex.: 4599" maxlength="20" />
           </label>
-          <button id="carregar-dt" type="button">Carregar</button>
+          <button id="pesquisar-dt" type="button">Pesquisar</button>
+          <select id="lista-dts"></select>
+          <button id="carregar-dt" type="button">Carregar DT selecionada</button>
           <button id="imprimir" type="button" class="primary">Imprimir em paisagem</button>
         </div>
 

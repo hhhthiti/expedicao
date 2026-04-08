@@ -28,12 +28,21 @@ const STAR_PRODUCTS = [
 
 const tabButtons = document.querySelectorAll(".tab-btn");
 const panels = document.querySelectorAll(".tab-panel");
-const itensBody = document.querySelector("#itens-table tbody");
-const totalFardosEl = document.getElementById("total-fardos");
 const statusEl = document.getElementById("status");
-const resumoCabecalhoEl = document.getElementById("resumo-cabecalho");
+const resumoImportacaoEl = document.getElementById("resumo-importacao");
+const listaDtsEl = document.getElementById("lista-dts");
 
-let headerData = {};
+const STORAGE_KEY = "dts-store-v2";
+let dtStore = loadStore();
+
+function loadStore() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  return raw ? JSON.parse(raw) : {};
+}
+
+function saveStore() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(dtStore));
+}
 
 tabButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -45,97 +54,6 @@ tabButtons.forEach((btn) => {
   });
 });
 
-function recalcRow(row) {
-  const qtd = Number(row.querySelector(".qtd")?.value || 0);
-  const padrao = Number(row.querySelector(".padrao")?.value || 0);
-  const fechado = padrao > 0 ? Math.floor(qtd / padrao) : 0;
-  const fracao = padrao > 0 ? qtd % padrao : qtd;
-  row.querySelector(".fechado").textContent = fechado;
-  row.querySelector(".fracao").textContent = fracao;
-}
-
-function recalcTotal() {
-  const total = [...itensBody.querySelectorAll(".qtd")].reduce((acc, input) => {
-    return acc + Number(input.value || 0);
-  }, 0);
-  totalFardosEl.textContent = total;
-}
-
-async function buscarPadraoPorSku(sku) {
-  if (!sku) return null;
-  const { data, error } = await supabaseClient
-    .from("produtos")
-    .select("sku, fardos_por_palete, tipo")
-    .eq("sku", sku)
-    .limit(1);
-  if (error) {
-    console.warn("Erro ao buscar no Supabase", error.message);
-    return null;
-  }
-  return data?.[0] || null;
-}
-
-function buildItemRow(item = {}) {
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td><input class="sku" value="${item.sku || ""}" placeholder="Ex.: 20104418" /></td>
-    <td><input class="qtd" type="number" min="0" step="1" value="${item.qtd || 0}" /></td>
-    <td><input class="padrao" type="number" min="0" step="1" value="${item.padrao || 0}" /></td>
-    <td class="fechado">0</td>
-    <td class="fracao">0</td>
-    <td><button class="remove" type="button">Remover</button></td>
-  `;
-
-  const skuInput = tr.querySelector(".sku");
-  const qtdInput = tr.querySelector(".qtd");
-  const padraoInput = tr.querySelector(".padrao");
-
-  [qtdInput, padraoInput].forEach((input) => {
-    input.addEventListener("input", () => {
-      recalcRow(tr);
-      recalcTotal();
-    });
-  });
-
-  skuInput.addEventListener("blur", async () => {
-    const sku = skuInput.value.trim();
-    const found = await buscarPadraoPorSku(sku);
-    if (found?.fardos_por_palete) {
-      padraoInput.value = Number(found.fardos_por_palete);
-      recalcRow(tr);
-      recalcTotal();
-    }
-  });
-
-  tr.querySelector(".remove").addEventListener("click", () => {
-    tr.remove();
-    recalcTotal();
-  });
-
-  itensBody.appendChild(tr);
-  recalcRow(tr);
-  recalcTotal();
-}
-
-document.getElementById("add-item").addEventListener("click", () => buildItemRow());
-
-function getFormData() {
-  const itens = [...itensBody.querySelectorAll("tr")].map((tr) => {
-    const sku = tr.querySelector(".sku").value.trim();
-    const qtd = Number(tr.querySelector(".qtd").value || 0);
-    const padrao = Number(tr.querySelector(".padrao").value || 0);
-    return {
-      sku,
-      qtd,
-      padrao,
-      pltFechado: padrao > 0 ? Math.floor(qtd / padrao) : 0,
-      fracao: padrao > 0 ? qtd % padrao : qtd
-    };
-  });
-  return { ...headerData, itens };
-}
-
-
 function formatDateFromSAP(value) {
   const clean = String(value || "").trim();
   if (/^\d{2}\.\d{2}\.\d{4}$/.test(clean)) {
@@ -145,57 +63,134 @@ function formatDateFromSAP(value) {
   return clean;
 }
 
-function parseSapLine() {
-  const line = document.getElementById("sap-linha").value.trim();
-  if (!line) {
-    statusEl.textContent = "Cole uma linha do SAP antes de continuar.";
-    return;
-  }
+async function buscarPadraoPorSku(sku) {
+  const { data, error } = await supabaseClient
+    .from("produtos")
+    .select("sku, fardos_por_palete")
+    .eq("sku", sku)
+    .limit(1);
 
-  const cols = line.split("	").map((v) => v.trim());
-  if (cols.length < 14) {
-    statusEl.textContent = `Linha inválida: esperado pelo menos 14 colunas, recebido ${cols.length}.`;
-    return;
-  }
+  if (error || !data?.length) return null;
+  return Number(data[0].fardos_por_palete || 0);
+}
 
-  headerData = {
+async function parseSapLineToItem(line) {
+  const cols = line.split("\t").map((v) => v.trim());
+  if (cols.length < 14) return null;
+
+  const material = cols[6];
+  const qtd = Number(cols[5] || 0);
+  const padraoSupabase = await buscarPadraoPorSku(material);
+  const padrao = Number(padraoSupabase || cols[12] || 0);
+
+  return {
     codCliente: cols[0],
     codTransportadora: cols[1],
     numeroTransporte: cols[2],
     infoAgenda: cols[3],
     nomeCliente: cols[4],
-    qtdeRemessa: cols[5],
-    material: cols[6],
     setorAtividade: cols[7],
     clientePallet: cols[8],
     agrupamentoRegional: cols[9],
     qtdTeoricaConvertida: cols[10],
     numeroNfe: cols[11],
     qtdTeorica: cols[12],
-    dataAgendamento: formatDateFromSAP(cols[13])
+    dataAgendamento: formatDateFromSAP(cols[13]),
+    item: {
+      sku: material,
+      qtd,
+      padrao,
+      pltFechado: padrao > 0 ? Math.floor(qtd / padrao) : 0,
+      fracao: padrao > 0 ? qtd % padrao : qtd
+    }
   };
-
-  resumoCabecalhoEl.innerHTML = `
-    <strong>DT:</strong> ${headerData.numeroTransporte || "-"} |
-    <strong>Cliente:</strong> ${headerData.nomeCliente || "-"} |
-    <strong>Data:</strong> ${headerData.dataAgendamento || "-"}
-  `;
-  statusEl.textContent = `Linha SAP carregada para a DT ${headerData.numeroTransporte}.`;
 }
 
-document.getElementById("parse-sap").addEventListener("click", parseSapLine);
-
-function saveCurrentData() {
-  const payload = getFormData();
-  if (!payload.numeroTransporte) {
-    statusEl.textContent = "Carregue a linha SAP para preencher o Nº transporte antes de salvar.";
+async function importarLinhasSAP() {
+  const raw = document.getElementById("sap-linhas").value.trim();
+  if (!raw) {
+    statusEl.textContent = "Cole uma ou mais linhas do SAP.";
     return;
   }
-  localStorage.setItem(`dt-${payload.numeroTransporte}`, JSON.stringify(payload));
-  statusEl.textContent = `DT ${payload.numeroTransporte} salva com sucesso.`;
+
+  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+  let importadas = 0;
+
+  for (const line of lines) {
+    const parsed = await parseSapLineToItem(line);
+    if (!parsed?.numeroTransporte) continue;
+
+    if (!dtStore[parsed.numeroTransporte]) {
+      dtStore[parsed.numeroTransporte] = {
+        codCliente: parsed.codCliente,
+        codTransportadora: parsed.codTransportadora,
+        numeroTransporte: parsed.numeroTransporte,
+        infoAgenda: parsed.infoAgenda,
+        nomeCliente: parsed.nomeCliente,
+        setorAtividade: parsed.setorAtividade,
+        clientePallet: parsed.clientePallet,
+        agrupamentoRegional: parsed.agrupamentoRegional,
+        qtdTeoricaConvertida: parsed.qtdTeoricaConvertida,
+        numeroNfe: parsed.numeroNfe,
+        qtdTeorica: parsed.qtdTeorica,
+        dataAgendamento: parsed.dataAgendamento,
+        itens: []
+      };
+    }
+
+    dtStore[parsed.numeroTransporte].itens.push(parsed.item);
+    importadas += 1;
+  }
+
+  saveStore();
+  renderResumoImportacao();
+  statusEl.textContent = `${importadas} linha(s) importada(s) e agrupada(s) por DT.`;
 }
 
-document.getElementById("salvar-dados").addEventListener("click", saveCurrentData);
+document.getElementById("importar-sap").addEventListener("click", importarLinhasSAP);
+
+function renderResumoImportacao() {
+  resumoImportacaoEl.innerHTML = "";
+  const registros = Object.values(dtStore);
+
+  if (!registros.length) {
+    resumoImportacaoEl.innerHTML = '<tr><td colspan="4">Nenhuma DT importada ainda.</td></tr>';
+    return;
+  }
+
+  registros.forEach((dt) => {
+    const total = (dt.itens || []).reduce((acc, item) => acc + Number(item.qtd || 0), 0);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${dt.numeroTransporte}</td>
+      <td>${dt.nomeCliente || "-"}</td>
+      <td>${dt.itens?.length || 0}</td>
+      <td>${total}</td>
+    `;
+    resumoImportacaoEl.appendChild(tr);
+  });
+}
+
+function pesquisarPorFinalDT() {
+  const term = document.getElementById("busca-dt").value.trim();
+  const allDts = Object.keys(dtStore);
+  const matches = allDts.filter((dt) => !term || dt.endsWith(term));
+
+  listaDtsEl.innerHTML = "";
+  if (!matches.length) {
+    listaDtsEl.innerHTML = '<option value="">Nenhuma DT encontrada</option>';
+    return;
+  }
+
+  matches.forEach((dt) => {
+    const option = document.createElement("option");
+    option.value = dt;
+    option.textContent = `${dt} - ${dtStore[dt].nomeCliente || "Sem cliente"}`;
+    listaDtsEl.appendChild(option);
+  });
+}
+
+document.getElementById("pesquisar-dt").addEventListener("click", pesquisarPorFinalDT);
 
 function fillSheet(data) {
   document.getElementById("sheet-dt").textContent = `DT: ${data.numeroTransporte || "-"}`;
@@ -226,22 +221,12 @@ function fillSheet(data) {
 }
 
 document.getElementById("carregar-dt").addEventListener("click", () => {
-  const dt = document.getElementById("busca-dt").value.trim();
-  if (!dt) return;
-  const raw = localStorage.getItem(`dt-${dt}`);
-  if (!raw) {
-    alert("DT não encontrada no navegador. Salve primeiro na aba ZLES002.");
+  const dt = listaDtsEl.value;
+  if (!dt || !dtStore[dt]) {
+    alert("Selecione uma DT válida.");
     return;
   }
-  const parsed = JSON.parse(raw);
-  headerData = { ...parsed };
-  delete headerData.itens;
-  resumoCabecalhoEl.innerHTML = `
-    <strong>DT:</strong> ${headerData.numeroTransporte || "-"} |
-    <strong>Cliente:</strong> ${headerData.nomeCliente || "-"} |
-    <strong>Data:</strong> ${headerData.dataAgendamento || "-"}
-  `;
-  fillSheet(parsed);
+  fillSheet(dtStore[dt]);
 });
 
 document.getElementById("imprimir").addEventListener("click", () => window.print());
@@ -255,5 +240,6 @@ function renderStarProducts() {
   });
 }
 
-buildItemRow({ sku: "20104418", qtd: 560, padrao: 28 });
+renderResumoImportacao();
+pesquisarPorFinalDT();
 renderStarProducts();
