@@ -163,3 +163,16 @@ td {
     padding: 0;
   }
 }
+
+.hint {
+  color: #555;
+  font-size: 0.85rem;
+}
+
+.resumo-cabecalho {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #eef5ff;
+  border: 1px solid #c7dbff;
+  border-radius: 8px;
+}

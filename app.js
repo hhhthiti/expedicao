@@ -31,6 +31,9 @@ const panels = document.querySelectorAll(".tab-panel");
 const itensBody = document.querySelector("#itens-table tbody");
 const totalFardosEl = document.getElementById("total-fardos");
 const statusEl = document.getElementById("status");
+const resumoCabecalhoEl = document.getElementById("resumo-cabecalho");
+
+let headerData = {};
 
 tabButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -117,9 +120,6 @@ function buildItemRow(item = {}) {
 document.getElementById("add-item").addEventListener("click", () => buildItemRow());
 
 function getFormData() {
-  const form = document.getElementById("zles-form");
-  const raw = new FormData(form);
-  const header = Object.fromEntries(raw.entries());
   const itens = [...itensBody.querySelectorAll("tr")].map((tr) => {
     const sku = tr.querySelector(".sku").value.trim();
     const qtd = Number(tr.querySelector(".qtd").value || 0);
@@ -132,13 +132,63 @@ function getFormData() {
       fracao: padrao > 0 ? qtd % padrao : qtd
     };
   });
-  return { ...header, itens };
+  return { ...headerData, itens };
 }
+
+
+function formatDateFromSAP(value) {
+  const clean = String(value || "").trim();
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(clean)) {
+    const [dd, mm, yyyy] = clean.split(".");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return clean;
+}
+
+function parseSapLine() {
+  const line = document.getElementById("sap-linha").value.trim();
+  if (!line) {
+    statusEl.textContent = "Cole uma linha do SAP antes de continuar.";
+    return;
+  }
+
+  const cols = line.split("	").map((v) => v.trim());
+  if (cols.length < 14) {
+    statusEl.textContent = `Linha inválida: esperado pelo menos 14 colunas, recebido ${cols.length}.`;
+    return;
+  }
+
+  headerData = {
+    codCliente: cols[0],
+    codTransportadora: cols[1],
+    numeroTransporte: cols[2],
+    infoAgenda: cols[3],
+    nomeCliente: cols[4],
+    qtdeRemessa: cols[5],
+    material: cols[6],
+    setorAtividade: cols[7],
+    clientePallet: cols[8],
+    agrupamentoRegional: cols[9],
+    qtdTeoricaConvertida: cols[10],
+    numeroNfe: cols[11],
+    qtdTeorica: cols[12],
+    dataAgendamento: formatDateFromSAP(cols[13])
+  };
+
+  resumoCabecalhoEl.innerHTML = `
+    <strong>DT:</strong> ${headerData.numeroTransporte || "-"} |
+    <strong>Cliente:</strong> ${headerData.nomeCliente || "-"} |
+    <strong>Data:</strong> ${headerData.dataAgendamento || "-"}
+  `;
+  statusEl.textContent = `Linha SAP carregada para a DT ${headerData.numeroTransporte}.`;
+}
+
+document.getElementById("parse-sap").addEventListener("click", parseSapLine);
 
 function saveCurrentData() {
   const payload = getFormData();
   if (!payload.numeroTransporte) {
-    statusEl.textContent = "Informe o Nº transporte para salvar.";
+    statusEl.textContent = "Carregue a linha SAP para preencher o Nº transporte antes de salvar.";
     return;
   }
   localStorage.setItem(`dt-${payload.numeroTransporte}`, JSON.stringify(payload));
@@ -183,7 +233,15 @@ document.getElementById("carregar-dt").addEventListener("click", () => {
     alert("DT não encontrada no navegador. Salve primeiro na aba ZLES002.");
     return;
   }
-  fillSheet(JSON.parse(raw));
+  const parsed = JSON.parse(raw);
+  headerData = { ...parsed };
+  delete headerData.itens;
+  resumoCabecalhoEl.innerHTML = `
+    <strong>DT:</strong> ${headerData.numeroTransporte || "-"} |
+    <strong>Cliente:</strong> ${headerData.nomeCliente || "-"} |
+    <strong>Data:</strong> ${headerData.dataAgendamento || "-"}
+  `;
+  fillSheet(parsed);
 });
 
 document.getElementById("imprimir").addEventListener("click", () => window.print());

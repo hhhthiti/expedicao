@@ -21,21 +21,15 @@
     <main>
       <section id="zles002" class="tab-panel active">
         <h2>Cadastro da Remessa (ZLES002)</h2>
-        <form id="zles-form" class="grid-form">
-          <label>Cód. Cliente Recebedor/Fornecedor <input name="codCliente" required /></label>
-          <label>Cód. Transportadora <input name="codTransportadora" required /></label>
-          <label>Nº transporte (DT) <input name="numeroTransporte" required /></label>
-          <label>Inf. Agenda Entrega <input name="infoAgenda" /></label>
-          <label>Nome Cliente/Fornecedor <input name="nomeCliente" required /></label>
-          <label>Qtde Remessa <input name="qtdeRemessa" type="number" min="0" step="1" /></label>
-          <label>Setor de atividade <input name="setorAtividade" /></label>
-          <label>Cliente Pallet <input name="clientePallet" /></label>
-          <label>Agrupamento Regional <input name="agrupamentoRegional" /></label>
-          <label>Qtd. Teórica Paletização Convertida <input name="qtdTeoricaConvertida" type="number" min="0" /></label>
-          <label>Nrº NFe <input name="numeroNfe" /></label>
-          <label>Quantidade Teórica Paletização <input name="qtdTeorica" type="number" min="0" /></label>
-          <label>Data Agendamento <input name="dataAgendamento" type="date" /></label>
-        </form>
+        <div class="sub-card">
+          <label>
+            Cole 1 linha do SAP (colunas separadas por TAB, no formato do Excel)
+            <input id="sap-linha" placeholder="Cole aqui a linha completa da remessa" />
+          </label>
+          <button id="parse-sap" type="button">Ler linha SAP</button>
+          <p class="hint">Ordem esperada: Cód Cliente, Cód Transportadora, Nº transporte, Inf Agenda, Nome Cliente, Qtde Remessa, Material, Setor, Cliente Pallet, Agrupamento Regional, Qtd Teórica Convertida, Nº NFe, Quantidade Teórica, Data Agendamento.</p>
+          <div id="resumo-cabecalho" class="resumo-cabecalho">Nenhuma linha SAP carregada.</div>
+        </div>
 
         <div class="sub-card">
           <div class="row-title">
