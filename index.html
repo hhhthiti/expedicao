@@ -9,26 +9,44 @@
   <body>
     <header>
       <h1>Painel Logístico</h1>
-      <p>Importação em lote do SAP, relatório por DT e produtos estrela.</p>
+      <p>Importação em lote, grade de carregamento, dashboard de pátio e status operacional.</p>
     </header>
 
     <nav class="tabs">
       <button class="tab-btn active" data-tab="zles002">ZLES002</button>
+      <button class="tab-btn" data-tab="grade">Grade</button>
+      <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="status-page">Status</button>
       <button class="tab-btn" data-tab="relatorio">Relatório</button>
       <button class="tab-btn" data-tab="produtos-estrela">Produtos Estrela</button>
     </nav>
 
     <main>
       <section id="zles002" class="tab-panel active">
-        <h2>Importação SAP (múltiplas linhas)</h2>
+        <h2>Detalhes de Materiais</h2>
         <div class="sub-card">
           <label>
             Cole as linhas do SAP (uma linha por item/remessa)
             <textarea id="sap-linhas" rows="8" placeholder="Cole aqui várias linhas copiadas do SAP/Excel"></textarea>
           </label>
           <p class="hint">Formato esperado por linha (TAB): Cód Cliente, Cód Transportadora, Nº transporte, Inf Agenda, Nome Cliente, Qtde Remessa, Material, Setor, Cliente Pallet, Agrupamento Regional, Qtd Teórica Convertida, Nº NFe, Quantidade Teórica, Data Agendamento.</p>
-          <button id="importar-sap" type="button" class="primary">Importar linhas SAP</button>
+          <label>
+            Ou envie uma planilha de materiais (.xlsx/.xls/.csv)
+            <input id="sap-file" type="file" accept=".xlsx,.xls,.csv" />
+          </label>
+          <button id="importar-sap" type="button" class="primary">Importar materiais</button>
           <p id="status" aria-live="polite"></p>
+        </div>
+
+        <div class="sub-card">
+          <h3>Locais (importação de shipment)</h3>
+          <p class="hint">A leitura da planilha usa o mapeamento solicitado por linha/posição: 3=DT, 5=LOCAL, 8=CIDADE DESTINO, 10=PESO, 13=NOME TRANSPORTADORA, 15=NOME MOTORISTA, 17-19=PLACAS, 21=AGENDA, 23=FIM AGENDA.</p>
+          <label>
+            Envie a planilha de shipment
+            <input id="locais-file" type="file" accept=".xlsx,.xls,.csv" />
+          </label>
+          <button id="importar-locais" type="button">Importar locais</button>
+          <p id="status-locais" aria-live="polite"></p>
         </div>
 
         <div class="sub-card">
@@ -45,6 +63,66 @@
             <tbody id="resumo-importacao"></tbody>
           </table>
         </div>
+      </section>
+
+      <section id="grade" class="tab-panel">
+        <h2>Grade</h2>
+        <div class="sub-card">
+          <table>
+            <thead>
+              <tr>
+                <th>DT</th>
+                <th>Transportadora</th>
+                <th>Grade Carregamento</th>
+                <th>Fim de Carregamento</th>
+                <th>Hora Chegada</th>
+                <th>Status</th>
+                <th>Tipo</th>
+                <th>Toneladas</th>
+                <th>Agenda</th>
+              </tr>
+            </thead>
+            <tbody id="grade-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="dashboard" class="tab-panel">
+        <h2>Dashboard (Pátio)</h2>
+        <div class="sub-card">
+          <table>
+            <thead>
+              <tr>
+                <th>DT</th>
+                <th>HORA</th>
+                <th>DATA</th>
+                <th>Placa</th>
+                <th>Transportadora</th>
+                <th>Status</th>
+                <th>Mapa</th>
+                <th>Grade</th>
+                <th>Tipo</th>
+                <th>Peso</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="status-page" class="tab-panel">
+        <h2>Status</h2>
+        <div class="sub-card">
+          <p><strong>Venda TOTAL:</strong> <span id="venda-total">175</span></p>
+          <p class="hint">As fórmulas da lógica de status foram preservadas e os indicadores são atualizados automaticamente.</p>
+          <table>
+            <thead>
+              <tr><th>Status</th><th>Planejado</th><th>Realizado</th><th>Pend</th></tr>
+            </thead>
+            <tbody id="status-body"></tbody>
+          </table>
+        </div>
+        <div id="charts" class="charts-grid"></div>
       </section>
 
       <section id="relatorio" class="tab-panel">
@@ -122,8 +200,8 @@
       </section>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>
- 

@@ -21,6 +21,7 @@ main {
   padding: 0 1rem 1rem;
   max-width: 1200px;
   margin: 0 auto;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
@@ -45,13 +46,6 @@ main {
   display: block;
 }
 
-.grid-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
 label {
   display: flex;
   flex-direction: column;
@@ -60,6 +54,7 @@ label {
 }
 
 input,
+select,
 button,
 textarea {
   font: inherit;
@@ -86,12 +81,6 @@ button.primary {
   border: 1px solid #ddd;
 }
 
-.row-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 table {
   width: 100%;
   border-collapse: collapse;
@@ -105,6 +94,71 @@ td {
   padding: 0.45rem;
   text-align: left;
   font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+.status-select {
+  color: #fff;
+  border: none;
+}
+
+.status-chip {
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  display: inline-block;
+}
+
+.inline-input {
+  width: 100%;
+  min-width: 110px;
+  box-sizing: border-box;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.8rem;
+}
+
+.chart-card {
+  background: #fff;
+  border: 1px solid #dde3ea;
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.chart-card h4 {
+  margin: 0 0 0.5rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 40px;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.3rem;
+}
+
+.bar {
+  background: #e9eef4;
+  border-radius: 999px;
+  overflow: hidden;
+  height: 12px;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  background: #375a7f;
+}
+
+.bar.done i {
+  background: #2e7d32;
+}
+
+.bar.pend i {
+  background: #c62828;
 }
 
 .print-sheet {
@@ -149,6 +203,9 @@ td {
   .tabs,
   #relatorio .sub-card,
   #zles002,
+  #grade,
+  #dashboard,
+  #status-page,
   #produtos-estrela {
     display: none !important;
   }
@@ -168,12 +225,3 @@ td {
   color: #555;
   font-size: 0.85rem;
 }
-
-.resumo-cabecalho {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: #eef5ff;
-  border: 1px solid #c7dbff;
-  border-radius: 8px;
-}
- 
