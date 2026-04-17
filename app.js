@@ -2,6 +2,10 @@ const SUPABASE_URL = "https://qfjghplxbtogshfjkawx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_rIcKdaflOvJ0DLTJDcOrxA_bpTGG2hA";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const STORAGE_KEY = "dts-store-v3";
+const USERS_KEY = "users-store-v1";
+const SESSION_KEY = "users-session-v1";
+
 const STAR_PRODUCTS = [
   ["20104425", "PANO SCOTT DURAMAX 58X03X08 BRANCO"],
   ["20092384", "GUARDANAPO SCALA 22X20 - 3600 UN"],
@@ -26,18 +30,7 @@ const STAR_PRODUCTS = [
   ["20111061", "TOAX430 2R 120F 3X6 SCALA WARM UP"]
 ];
 
-const STATUS_OPTIONS = [
-  "EXPEDIDO",
-  "CARREGANDO",
-  "AG CHEGADA",
-  "NO SHOW",
-  "VEICULO RECUSADO",
-  "SEPARANDO",
-  "EM FATURAMENTO",
-  "PATIO",
-  "DT EXCLUDA",
-  "FOI EMBORA"
-];
+const STATUS_OPTIONS = ["EXPEDIDO", "CARREGANDO", "AG CHEGADA", "NO SHOW", "VEICULO RECUSADO", "SEPARANDO", "EM FATURAMENTO", "PATIO", "DT EXCLUDA", "FOI EMBORA"];
 
 const STATUS_COLORS = {
   EXPEDIDO: "#2e7d32",
@@ -63,6 +56,10 @@ const STATUS_BASE = {
   GRADE: { planejado: 69, realizado: 69 }
 };
 
+let store = loadStore();
+let users = loadUsers();
+let currentUser = loadSession();
+
 const tabButtons = document.querySelectorAll(".tab-btn");
 const panels = document.querySelectorAll(".tab-panel");
 const statusEl = document.getElementById("status");
@@ -72,32 +69,199 @@ const listaDtsEl = document.getElementById("lista-dts");
 const gradeBody = document.getElementById("grade-body");
 const dashboardBody = document.getElementById("dashboard-body");
 
-const STORAGE_KEY = "dts-store-v3";
-let store = loadStore();
-
 function loadStore() {
   const raw = localStorage.getItem(STORAGE_KEY);
   const parsed = raw ? JSON.parse(raw) : {};
-  return {
-    dts: parsed.dts || {},
-    grade: parsed.grade || [],
-    dashboard: parsed.dashboard || []
-  };
+  return { dts: parsed.dts || {}, grade: parsed.grade || [], dashboard: parsed.dashboard || [] };
 }
 
 function saveStore() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
 }
 
-tabButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const target = btn.dataset.tab;
-    tabButtons.forEach((b) => b.classList.remove("active"));
-    panels.forEach((p) => p.classList.remove("active"));
-    btn.classList.add("active");
-    document.getElementById(target).classList.add("active");
+function loadUsers() {
+  const raw = localStorage.getItem(USERS_KEY);
+  const parsed = raw ? JSON.parse(raw) : [];
+  const hasMaster = parsed.some((u) => u.role === "mestre");
+  if (!hasMaster) {
+    parsed.push({ username: "mestre", password: "123456", role: "mestre" });
+    localStorage.setItem(USERS_KEY, JSON.stringify(parsed));
+  }
+  return parsed;
+}
+
+function saveUsers() {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function loadSession() {
+  const raw = localStorage.getItem(SESSION_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function saveSession(user) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function setupAuth() {
+  const authScreen = document.getElementById("auth-screen");
+  const appShell = document.getElementById("app-shell");
+  const loginForm = document.getElementById("login-form");
+  const registerForm = document.getElementById("register-form");
+  const authStatus = document.getElementById("auth-status");
+
+  document.getElementById("show-login").addEventListener("click", () => {
+    loginForm.classList.remove("hidden");
+    registerForm.classList.add("hidden");
   });
-});
+
+  document.getElementById("show-register").addEventListener("click", () => {
+    registerForm.classList.remove("hidden");
+    loginForm.classList.add("hidden");
+  });
+
+  loginForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const username = document.getElementById("login-user").value.trim();
+    const password = document.getElementById("login-pass").value;
+    const found = users.find((u) => u.username === username && u.password === password);
+    if (!found) {
+      authStatus.textContent = "Usuário ou senha inválidos.";
+      return;
+    }
+    currentUser = { username: found.username, role: found.role };
+    saveSession(currentUser);
+    authStatus.textContent = "";
+    authScreen.classList.add("hidden");
+    appShell.classList.remove("hidden");
+    onAuthenticated();
+  });
+
+  registerForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const username = document.getElementById("register-user").value.trim();
+    const password = document.getElementById("register-pass").value;
+    if (!username || !password) {
+      authStatus.textContent = "Preencha usuário e senha.";
+      return;
+    }
+    if (users.some((u) => u.username === username)) {
+      authStatus.textContent = "Usuário já existe.";
+      return;
+    }
+    users.push({ username, password, role: "padrao" });
+    saveUsers();
+    authStatus.textContent = "Registro concluído. Agora faça login.";
+    registerForm.reset();
+    loginForm.classList.remove("hidden");
+    registerForm.classList.add("hidden");
+  });
+
+  document.getElementById("logout-btn").addEventListener("click", () => {
+    clearSession();
+    currentUser = null;
+    appShell.classList.add("hidden");
+    authScreen.classList.remove("hidden");
+  });
+
+  if (currentUser) {
+    authScreen.classList.add("hidden");
+    appShell.classList.remove("hidden");
+    onAuthenticated();
+  }
+}
+
+function onAuthenticated() {
+  document.getElementById("current-user").textContent = `Usuário: ${currentUser.username} (${currentUser.role})`;
+  applyRoleVisibility();
+  setupAdminPanel();
+  bindAppEvents();
+  renderResumoImportacao();
+  pesquisarPorFinalDT();
+  renderGrade();
+  renderDashboard();
+  renderStatusPage();
+  renderStarProducts();
+}
+
+function applyRoleVisibility() {
+  const role = currentUser?.role || "padrao";
+  document.querySelectorAll(".role-protected").forEach((el) => {
+    const allowed = String(el.dataset.roles || "").split(",").map((v) => v.trim());
+    el.classList.toggle("hidden", !allowed.includes(role));
+  });
+
+  if (document.querySelector(".tab-btn.active.hidden")) {
+    const first = document.querySelector(".tab-btn:not(.hidden)");
+    if (first) first.click();
+  }
+}
+
+function setupAdminPanel() {
+  const panel = document.getElementById("admin-panel");
+  const select = document.getElementById("promote-user");
+  const adminStatus = document.getElementById("admin-status");
+  if (currentUser?.role !== "mestre") {
+    panel.classList.add("hidden");
+    return;
+  }
+
+  panel.classList.remove("hidden");
+  select.innerHTML = "";
+  users.filter((u) => u.role !== "mestre" && u.role !== "analista").forEach((u) => {
+    const opt = document.createElement("option");
+    opt.value = u.username;
+    opt.textContent = u.username;
+    select.appendChild(opt);
+  });
+
+  document.getElementById("promote-btn").onclick = () => {
+    const username = select.value;
+    const found = users.find((u) => u.username === username);
+    if (!found) {
+      adminStatus.textContent = "Nenhum usuário padrão disponível para promoção.";
+      return;
+    }
+    found.role = "analista";
+    saveUsers();
+    adminStatus.textContent = `${username} promovido para analista.`;
+    setupAdminPanel();
+  };
+}
+
+let appEventsBound = false;
+function bindAppEvents() {
+  if (appEventsBound) return;
+  appEventsBound = true;
+
+  tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.classList.contains("hidden")) return;
+      const target = btn.dataset.tab;
+      tabButtons.forEach((b) => b.classList.remove("active"));
+      panels.forEach((p) => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(target).classList.add("active");
+    });
+  });
+
+  document.getElementById("importar-sap").addEventListener("click", () => importarMateriais().catch((e) => (statusEl.textContent = `Erro: ${e.message}`)));
+  document.getElementById("importar-locais").addEventListener("click", () => importarLocais().catch((e) => (statusLocaisEl.textContent = `Erro: ${e.message}`)));
+  document.getElementById("pesquisar-dt").addEventListener("click", pesquisarPorFinalDT);
+  document.getElementById("carregar-dt").addEventListener("click", () => {
+    const dt = listaDtsEl.value;
+    if (!dt || !store.dts[dt]) {
+      alert("Selecione uma DT válida.");
+      return;
+    }
+    fillSheet(store.dts[dt]);
+  });
+  document.getElementById("imprimir").addEventListener("click", () => window.print());
+}
 
 function formatDateFromSAP(value) {
   const clean = String(value || "").trim();
@@ -215,8 +379,6 @@ async function importarMateriais() {
   statusEl.textContent = `${total} linha(s) de materiais importada(s).`;
 }
 
-document.getElementById("importar-sap").addEventListener("click", () => importarMateriais().catch((e) => (statusEl.textContent = `Erro: ${e.message}`)));
-
 function parseLocaisByPosition(row) {
   return {
     dt: String(row[2] || "").trim(),
@@ -247,15 +409,11 @@ function ensureGradeRow(item) {
     agenda: item.agenda,
     placa: item.placaVeiculo || item.placaComp1 || item.placaComp2,
     cidadeDestino: item.cidadeDestino,
-    motorista: item.motorista,
     peso: item.peso
   };
 
-  if (idx === -1) {
-    store.grade.push(base);
-  } else {
-    store.grade[idx] = { ...store.grade[idx], ...base, status: store.grade[idx].status || "AG CHEGADA", horaChegada: store.grade[idx].horaChegada || "" };
-  }
+  if (idx === -1) store.grade.push(base);
+  else store.grade[idx] = { ...store.grade[idx], ...base, status: store.grade[idx].status || "AG CHEGADA", horaChegada: store.grade[idx].horaChegada || "" };
 }
 
 async function importarLocais() {
@@ -264,7 +422,6 @@ async function importarLocais() {
     statusLocaisEl.textContent = "Selecione a planilha de shipment.";
     return;
   }
-
   const rows = await parseSheetFromFile(file);
   let count = 0;
   rows.slice(1).forEach((row) => {
@@ -273,14 +430,11 @@ async function importarLocais() {
     ensureGradeRow(item);
     count += 1;
   });
-
   saveStore();
   renderGrade();
   renderStatusPage();
   statusLocaisEl.textContent = `${count} registro(s) importado(s) para a grade.`;
 }
-
-document.getElementById("importar-locais").addEventListener("click", () => importarLocais().catch((e) => (statusLocaisEl.textContent = `Erro: ${e.message}`)));
 
 function upsertDashboardFromPatio(gradeItem) {
   const idx = store.dashboard.findIndex((d) => d.dt === gradeItem.dt);
@@ -301,24 +455,24 @@ function upsertDashboardFromPatio(gradeItem) {
       tipo: gradeItem.tipo || "",
       peso: gradeItem.peso || 0
     });
-  } else {
-    store.dashboard[idx] = {
-      ...store.dashboard[idx],
-      dt: gradeItem.dt,
-      placa: gradeItem.placa || store.dashboard[idx].placa,
-      transportadora: gradeItem.transportadora || store.dashboard[idx].transportadora,
-      status: gradeItem.status,
-      mapa: gradeItem.cidadeDestino || store.dashboard[idx].mapa,
-      grade: gradeItem.gradeCarregamento || store.dashboard[idx].grade,
-      tipo: gradeItem.tipo || store.dashboard[idx].tipo,
-      peso: gradeItem.peso || store.dashboard[idx].peso
-    };
+    return;
   }
+
+  store.dashboard[idx] = {
+    ...store.dashboard[idx],
+    dt: gradeItem.dt,
+    placa: gradeItem.placa || store.dashboard[idx].placa,
+    transportadora: gradeItem.transportadora || store.dashboard[idx].transportadora,
+    status: gradeItem.status,
+    mapa: gradeItem.cidadeDestino || store.dashboard[idx].mapa,
+    grade: gradeItem.gradeCarregamento || store.dashboard[idx].grade,
+    tipo: gradeItem.tipo || store.dashboard[idx].tipo,
+    peso: gradeItem.peso || store.dashboard[idx].peso
+  };
 }
 
 function renderGrade() {
   gradeBody.innerHTML = "";
-
   if (!store.grade.length) {
     gradeBody.innerHTML = '<tr><td colspan="9">Nenhuma linha importada.</td></tr>';
     return;
@@ -357,11 +511,7 @@ function renderGrade() {
       const idx = Number(e.target.dataset.gradeStatus);
       store.grade[idx].status = e.target.value;
       e.target.style.background = STATUS_COLORS[e.target.value] || "#eceff1";
-
-      if (e.target.value === "PATIO") {
-        upsertDashboardFromPatio(store.grade[idx]);
-      }
-
+      if (e.target.value === "PATIO") upsertDashboardFromPatio(store.grade[idx]);
       saveStore();
       renderDashboard();
       renderStatusPage();
@@ -371,7 +521,6 @@ function renderGrade() {
 
 function renderDashboard() {
   dashboardBody.innerHTML = "";
-
   if (!store.dashboard.length) {
     dashboardBody.innerHTML = '<tr><td colspan="10">Nenhum veículo em pátio.</td></tr>';
     return;
@@ -396,16 +545,14 @@ function renderDashboard() {
 
   document.querySelectorAll("[data-dash-hora]").forEach((el) => {
     el.addEventListener("change", (e) => {
-      const idx = Number(e.target.dataset.dashHora);
-      store.dashboard[idx].hora = e.target.value;
+      store.dashboard[Number(e.target.dataset.dashHora)].hora = e.target.value;
       saveStore();
     });
   });
 
   document.querySelectorAll("[data-dash-data]").forEach((el) => {
     el.addEventListener("change", (e) => {
-      const idx = Number(e.target.dataset.dashData);
-      store.dashboard[idx].data = fromIsoDate(e.target.value);
+      store.dashboard[Number(e.target.dataset.dashData)].data = fromIsoDate(e.target.value);
       saveStore();
     });
   });
@@ -455,7 +602,6 @@ function renderStatusPage() {
 function renderResumoImportacao() {
   resumoImportacaoEl.innerHTML = "";
   const registros = Object.values(store.dts);
-
   if (!registros.length) {
     resumoImportacaoEl.innerHTML = '<tr><td colspan="4">Nenhuma DT importada ainda.</td></tr>';
     return;
@@ -464,12 +610,7 @@ function renderResumoImportacao() {
   registros.forEach((dt) => {
     const total = (dt.itens || []).reduce((acc, item) => acc + Number(item.qtd || 0), 0);
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${dt.numeroTransporte}</td>
-      <td>${dt.nomeCliente || "-"}</td>
-      <td>${dt.itens?.length || 0}</td>
-      <td>${total}</td>
-    `;
+    tr.innerHTML = `<td>${dt.numeroTransporte}</td><td>${dt.nomeCliente || "-"}</td><td>${dt.itens?.length || 0}</td><td>${total}</td>`;
     resumoImportacaoEl.appendChild(tr);
   });
 }
@@ -478,8 +619,8 @@ function pesquisarPorFinalDT() {
   const term = document.getElementById("busca-dt").value.trim();
   const allDts = Object.keys(store.dts);
   const matches = allDts.filter((dt) => !term || dt.endsWith(term));
-
   listaDtsEl.innerHTML = "";
+
   if (!matches.length) {
     listaDtsEl.innerHTML = '<option value="">Nenhuma DT encontrada</option>';
     return;
@@ -492,8 +633,6 @@ function pesquisarPorFinalDT() {
     listaDtsEl.appendChild(option);
   });
 }
-
-document.getElementById("pesquisar-dt").addEventListener("click", pesquisarPorFinalDT);
 
 function fillSheet(data) {
   document.getElementById("sheet-dt").textContent = `DT: ${data.numeroTransporte || "-"}`;
@@ -523,19 +662,9 @@ function fillSheet(data) {
   document.getElementById("sheet-total").textContent = total;
 }
 
-document.getElementById("carregar-dt").addEventListener("click", () => {
-  const dt = listaDtsEl.value;
-  if (!dt || !store.dts[dt]) {
-    alert("Selecione uma DT válida.");
-    return;
-  }
-  fillSheet(store.dts[dt]);
-});
-
-document.getElementById("imprimir").addEventListener("click", () => window.print());
-
 function renderStarProducts() {
   const body = document.getElementById("produtos-estrela-body");
+  if (body.childNodes.length) return;
   STAR_PRODUCTS.forEach(([sku, descricao]) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${sku}</td><td>${descricao}</td>`;
@@ -543,9 +672,4 @@ function renderStarProducts() {
   });
 }
 
-renderResumoImportacao();
-pesquisarPorFinalDT();
-renderStarProducts();
-renderGrade();
-renderDashboard();
-renderStatusPage();
+setupAuth();

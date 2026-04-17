@@ -15,6 +15,42 @@ main {
   padding: 1rem;
 }
 
+.hidden {
+  display: none !important;
+}
+
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.auth-card {
+  width: min(440px, 95vw);
+  background: #fff;
+  border: 1px solid #d8dce1;
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.auth-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.user-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 .tabs {
   display: flex;
   gap: 0.5rem;
@@ -199,6 +235,7 @@ td {
     background: white;
   }
 
+  #auth-screen,
   header,
   .tabs,
   #relatorio .sub-card,
@@ -206,7 +243,8 @@ td {
   #grade,
   #dashboard,
   #status-page,
-  #produtos-estrela {
+  #produtos-estrela,
+  #mb51 {
     display: none !important;
   }
 

@@ -7,198 +7,258 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header>
-      <h1>Painel Logístico</h1>
-      <p>Importação em lote, grade de carregamento, dashboard de pátio e status operacional.</p>
-    </header>
+    <section id="auth-screen" class="auth-screen">
+      <div class="auth-card">
+        <h1>Painel Logístico</h1>
+        <p>Acesse com seu usuário ou faça um novo registro.</p>
 
-    <nav class="tabs">
-      <button class="tab-btn active" data-tab="zles002">ZLES002</button>
-      <button class="tab-btn" data-tab="grade">Grade</button>
-      <button class="tab-btn" data-tab="dashboard">Dashboard</button>
-      <button class="tab-btn" data-tab="status-page">Status</button>
-      <button class="tab-btn" data-tab="relatorio">Relatório</button>
-      <button class="tab-btn" data-tab="produtos-estrela">Produtos Estrela</button>
-    </nav>
-
-    <main>
-      <section id="zles002" class="tab-panel active">
-        <h2>Detalhes de Materiais</h2>
-        <div class="sub-card">
-          <label>
-            Cole as linhas do SAP (uma linha por item/remessa)
-            <textarea id="sap-linhas" rows="8" placeholder="Cole aqui várias linhas copiadas do SAP/Excel"></textarea>
-          </label>
-          <p class="hint">Formato esperado por linha (TAB): Cód Cliente, Cód Transportadora, Nº transporte, Inf Agenda, Nome Cliente, Qtde Remessa, Material, Setor, Cliente Pallet, Agrupamento Regional, Qtd Teórica Convertida, Nº NFe, Quantidade Teórica, Data Agendamento.</p>
-          <label>
-            Ou envie uma planilha de materiais (.xlsx/.xls/.csv)
-            <input id="sap-file" type="file" accept=".xlsx,.xls,.csv" />
-          </label>
-          <button id="importar-sap" type="button" class="primary">Importar materiais</button>
-          <p id="status" aria-live="polite"></p>
+        <div class="auth-toggle">
+          <button id="show-login" class="primary" type="button">Login</button>
+          <button id="show-register" type="button">Registro</button>
         </div>
 
-        <div class="sub-card">
-          <h3>Locais (importação de shipment)</h3>
-          <p class="hint">A leitura da planilha usa o mapeamento solicitado por linha/posição: 3=DT, 5=LOCAL, 8=CIDADE DESTINO, 10=PESO, 13=NOME TRANSPORTADORA, 15=NOME MOTORISTA, 17-19=PLACAS, 21=AGENDA, 23=FIM AGENDA.</p>
-          <label>
-            Envie a planilha de shipment
-            <input id="locais-file" type="file" accept=".xlsx,.xls,.csv" />
+        <form id="login-form" class="auth-form">
+          <label>Usuário
+            <input id="login-user" required />
           </label>
-          <button id="importar-locais" type="button">Importar locais</button>
-          <p id="status-locais" aria-live="polite"></p>
-        </div>
+          <label>Senha
+            <input id="login-pass" type="password" required />
+          </label>
+          <button class="primary" type="submit">Entrar</button>
+        </form>
 
-        <div class="sub-card">
-          <h3>DTs importadas no navegador</h3>
+        <form id="register-form" class="auth-form hidden">
+          <label>Usuário
+            <input id="register-user" required />
+          </label>
+          <label>Senha
+            <input id="register-pass" type="password" required />
+          </label>
+          <button class="primary" type="submit">Registrar</button>
+        </form>
+
+        <p class="hint">Novo registro entra como usuário padrão. Somente mestre pode promover para analista.</p>
+        <p id="auth-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <div id="app-shell" class="hidden">
+      <header>
+        <h1>Painel Logístico</h1>
+        <p>Importação em lote, grade de carregamento, dashboard de pátio e status operacional.</p>
+        <div class="user-bar">
+          <span id="current-user"></span>
+          <button id="logout-btn" type="button">Sair</button>
+        </div>
+      </header>
+
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="zles002">ZLES002</button>
+        <button class="tab-btn" data-tab="grade">Grade</button>
+        <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+        <button class="tab-btn" data-tab="status-page">Status</button>
+        <button class="tab-btn role-protected" data-roles="mestre,analista" data-tab="mb51">MB51</button>
+        <button class="tab-btn" data-tab="relatorio">Relatório</button>
+        <button class="tab-btn" data-tab="produtos-estrela">Produtos Estrela</button>
+      </nav>
+
+      <main>
+        <section id="zles002" class="tab-panel active">
+          <h2>Detalhes de Materiais</h2>
+
+          <div id="admin-panel" class="sub-card hidden">
+            <h3>Administração de usuários</h3>
+            <label>Promover usuário para analista
+              <select id="promote-user"></select>
+            </label>
+            <button id="promote-btn" type="button">Promover para analista</button>
+            <p id="admin-status"></p>
+          </div>
+
+          <div class="sub-card">
+            <label>
+              Cole as linhas do SAP (uma linha por item/remessa)
+              <textarea id="sap-linhas" rows="8" placeholder="Cole aqui várias linhas copiadas do SAP/Excel"></textarea>
+            </label>
+            <p class="hint">Formato esperado por linha (TAB): Cód Cliente, Cód Transportadora, Nº transporte, Inf Agenda, Nome Cliente, Qtde Remessa, Material, Setor, Cliente Pallet, Agrupamento Regional, Qtd Teórica Convertida, Nº NFe, Quantidade Teórica, Data Agendamento.</p>
+            <label>
+              Ou envie uma planilha de materiais (.xlsx/.xls/.csv)
+              <input id="sap-file" type="file" accept=".xlsx,.xls,.csv" />
+            </label>
+            <button id="importar-sap" type="button" class="primary">Importar materiais</button>
+            <p id="status" aria-live="polite"></p>
+          </div>
+
+          <div class="sub-card">
+            <h3>Locais (importação de shipment)</h3>
+            <p class="hint">A leitura da planilha usa o mapeamento solicitado por linha/posição: 3=DT, 5=LOCAL, 8=CIDADE DESTINO, 10=PESO, 13=NOME TRANSPORTADORA, 15=NOME MOTORISTA, 17-19=PLACAS, 21=AGENDA, 23=FIM AGENDA.</p>
+            <label>
+              Envie a planilha de shipment
+              <input id="locais-file" type="file" accept=".xlsx,.xls,.csv" />
+            </label>
+            <button id="importar-locais" type="button">Importar locais</button>
+            <p id="status-locais" aria-live="polite"></p>
+          </div>
+
+          <div class="sub-card">
+            <h3>DTs importadas no navegador</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>DT</th>
+                  <th>Cliente</th>
+                  <th>Itens</th>
+                  <th>Total fardos</th>
+                </tr>
+              </thead>
+              <tbody id="resumo-importacao"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="grade" class="tab-panel">
+          <h2>Grade</h2>
+          <div class="sub-card">
+            <table>
+              <thead>
+                <tr>
+                  <th>DT</th>
+                  <th>Transportadora</th>
+                  <th>Grade Carregamento</th>
+                  <th>Fim de Carregamento</th>
+                  <th>Hora Chegada</th>
+                  <th>Status</th>
+                  <th>Tipo</th>
+                  <th>Toneladas</th>
+                  <th>Agenda</th>
+                </tr>
+              </thead>
+              <tbody id="grade-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="dashboard" class="tab-panel">
+          <h2>Dashboard (Pátio)</h2>
+          <div class="sub-card">
+            <table>
+              <thead>
+                <tr>
+                  <th>DT</th>
+                  <th>HORA</th>
+                  <th>DATA</th>
+                  <th>Placa</th>
+                  <th>Transportadora</th>
+                  <th>Status</th>
+                  <th>Mapa</th>
+                  <th>Grade</th>
+                  <th>Tipo</th>
+                  <th>Peso</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="status-page" class="tab-panel">
+          <h2>Status</h2>
+          <div class="sub-card">
+            <p><strong>Venda TOTAL:</strong> <span id="venda-total">175</span></p>
+            <p class="hint">As fórmulas da lógica de status foram preservadas e os indicadores são atualizados automaticamente.</p>
+            <table>
+              <thead>
+                <tr><th>Status</th><th>Planejado</th><th>Realizado</th><th>Pend</th></tr>
+              </thead>
+              <tbody id="status-body"></tbody>
+            </table>
+          </div>
+          <div id="charts" class="charts-grid"></div>
+        </section>
+
+        <section id="mb51" class="tab-panel">
+          <h2>MB51</h2>
+          <div class="sub-card">
+            <p>Área exclusiva para usuários <strong>mestre</strong> e <strong>analista</strong>.</p>
+            <p class="hint">Use esta aba para consultas e controles MB51.</p>
+          </div>
+        </section>
+
+        <section id="relatorio" class="tab-panel">
+          <h2>Relatório para Impressão</h2>
+          <div class="sub-card">
+            <label>Pesquisar DT (digite os 4 últimos números)
+              <input id="busca-dt" placeholder="Ex.: 4599" maxlength="20" />
+            </label>
+            <button id="pesquisar-dt" type="button">Pesquisar</button>
+            <select id="lista-dts"></select>
+            <button id="carregar-dt" type="button">Carregar DT selecionada</button>
+            <button id="imprimir" type="button" class="primary">Imprimir em paisagem</button>
+          </div>
+
+          <article id="print-area" class="print-sheet">
+            <header class="sheet-header">
+              <div>
+                <h3>Relatório de Paletização</h3>
+                <p id="sheet-dt">DT: -</p>
+                <p id="sheet-cliente">Cliente: -</p>
+                <p id="sheet-data">Data agendamento: -</p>
+              </div>
+              <div class="logo-wrap">
+                <img
+                  src="icones\JSL.png"
+                  alt="Logo JSL"
+                  onerror="this.style.display='none'; this.parentElement.innerHTML='<strong>JSL</strong>'"
+                />
+              </div>
+            </header>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Nº transporte</th>
+                  <th>SKU</th>
+                  <th>Qtde</th>
+                  <th>Padrão Plt</th>
+                  <th>Plt Fechado</th>
+                  <th>Fração</th>
+                  <th>Conferido</th>
+                  <th>Avaria</th>
+                </tr>
+              </thead>
+              <tbody id="sheet-itens"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2"><strong>Total de fardos</strong></td>
+                  <td id="sheet-total">0</td>
+                  <td colspan="5"></td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <section class="observacoes">
+              <h4>Anotações do Conferente</h4>
+              <div class="notes-box"></div>
+            </section>
+
+            <p class="lacre">Lacre: _____________________________________________</p>
+          </article>
+        </section>
+
+        <section id="produtos-estrela" class="tab-panel">
+          <h2>Produtos Estrela</h2>
           <table>
             <thead>
               <tr>
-                <th>DT</th>
-                <th>Cliente</th>
-                <th>Itens</th>
-                <th>Total fardos</th>
-              </tr>
-            </thead>
-            <tbody id="resumo-importacao"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="grade" class="tab-panel">
-        <h2>Grade</h2>
-        <div class="sub-card">
-          <table>
-            <thead>
-              <tr>
-                <th>DT</th>
-                <th>Transportadora</th>
-                <th>Grade Carregamento</th>
-                <th>Fim de Carregamento</th>
-                <th>Hora Chegada</th>
-                <th>Status</th>
-                <th>Tipo</th>
-                <th>Toneladas</th>
-                <th>Agenda</th>
-              </tr>
-            </thead>
-            <tbody id="grade-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="dashboard" class="tab-panel">
-        <h2>Dashboard (Pátio)</h2>
-        <div class="sub-card">
-          <table>
-            <thead>
-              <tr>
-                <th>DT</th>
-                <th>HORA</th>
-                <th>DATA</th>
-                <th>Placa</th>
-                <th>Transportadora</th>
-                <th>Status</th>
-                <th>Mapa</th>
-                <th>Grade</th>
-                <th>Tipo</th>
-                <th>Peso</th>
-              </tr>
-            </thead>
-            <tbody id="dashboard-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="status-page" class="tab-panel">
-        <h2>Status</h2>
-        <div class="sub-card">
-          <p><strong>Venda TOTAL:</strong> <span id="venda-total">175</span></p>
-          <p class="hint">As fórmulas da lógica de status foram preservadas e os indicadores são atualizados automaticamente.</p>
-          <table>
-            <thead>
-              <tr><th>Status</th><th>Planejado</th><th>Realizado</th><th>Pend</th></tr>
-            </thead>
-            <tbody id="status-body"></tbody>
-          </table>
-        </div>
-        <div id="charts" class="charts-grid"></div>
-      </section>
-
-      <section id="relatorio" class="tab-panel">
-        <h2>Relatório para Impressão</h2>
-        <div class="sub-card">
-          <label>Pesquisar DT (digite os 4 últimos números)
-            <input id="busca-dt" placeholder="Ex.: 4599" maxlength="20" />
-          </label>
-          <button id="pesquisar-dt" type="button">Pesquisar</button>
-          <select id="lista-dts"></select>
-          <button id="carregar-dt" type="button">Carregar DT selecionada</button>
-          <button id="imprimir" type="button" class="primary">Imprimir em paisagem</button>
-        </div>
-
-        <article id="print-area" class="print-sheet">
-          <header class="sheet-header">
-            <div>
-              <h3>Relatório de Paletização</h3>
-              <p id="sheet-dt">DT: -</p>
-              <p id="sheet-cliente">Cliente: -</p>
-              <p id="sheet-data">Data agendamento: -</p>
-            </div>
-            <div class="logo-wrap">
-              <img
-                src="icones\JSL.png"
-                alt="Logo JSL"
-                onerror="this.style.display='none'; this.parentElement.innerHTML='<strong>JSL</strong>'"
-              />
-            </div>
-          </header>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Nº transporte</th>
                 <th>SKU</th>
-                <th>Qtde</th>
-                <th>Padrão Plt</th>
-                <th>Plt Fechado</th>
-                <th>Fração</th>
-                <th>Conferido</th>
-                <th>Avaria</th>
+                <th>Descrição</th>
               </tr>
             </thead>
-            <tbody id="sheet-itens"></tbody>
-            <tfoot>
-              <tr>
-                <td colspan="2"><strong>Total de fardos</strong></td>
-                <td id="sheet-total">0</td>
-                <td colspan="5"></td>
-              </tr>
-            </tfoot>
+            <tbody id="produtos-estrela-body"></tbody>
           </table>
-
-          <section class="observacoes">
-            <h4>Anotações do Conferente</h4>
-            <div class="notes-box"></div>
-          </section>
-
-          <p class="lacre">Lacre: _____________________________________________</p>
-        </article>
-      </section>
-
-      <section id="produtos-estrela" class="tab-panel">
-        <h2>Produtos Estrela</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>SKU</th>
-              <th>Descrição</th>
-            </tr>
-          </thead>
-          <tbody id="produtos-estrela-body"></tbody>
-        </table>
-      </section>
-    </main>
+        </section>
+      </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
