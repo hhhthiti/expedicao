@@ -7,49 +7,10 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <section id="auth-screen" class="auth-screen">
-      <div class="auth-card">
-        <h1>Painel Logístico</h1>
-        <p>Acesse com seu usuário ou faça um novo registro.</p>
-
-        <div class="auth-toggle">
-          <button id="show-login" class="primary" type="button">Login</button>
-          <button id="show-register" type="button">Registro</button>
-        </div>
-
-        <form id="login-form" class="auth-form">
-          <label>Usuário
-            <input id="login-user" required />
-          </label>
-          <label>Senha
-            <input id="login-pass" type="password" required />
-          </label>
-          <button class="primary" type="submit">Entrar</button>
-        </form>
-
-        <form id="register-form" class="auth-form hidden">
-          <label>Usuário
-            <input id="register-user" required />
-          </label>
-          <label>Senha
-            <input id="register-pass" type="password" required />
-          </label>
-          <button class="primary" type="submit">Registrar</button>
-        </form>
-
-        <p class="hint">Novo registro entra como usuário padrão. Somente mestre pode promover para analista.</p>
-        <p id="auth-status" aria-live="polite"></p>
-      </div>
-    </section>
-
-    <div id="app-shell" class="hidden">
+    <div id="app-shell">
       <header>
         <h1>Painel Logístico</h1>
         <p>Importação em lote, grade de carregamento, dashboard de pátio e status operacional.</p>
-        <div class="user-bar">
-          <span id="current-user"></span>
-          <button id="logout-btn" type="button">Sair</button>
-        </div>
       </header>
 
       <nav class="tabs">
@@ -57,7 +18,7 @@
         <button class="tab-btn" data-tab="grade">Grade</button>
         <button class="tab-btn" data-tab="dashboard">Dashboard</button>
         <button class="tab-btn" data-tab="status-page">Status</button>
-        <button class="tab-btn role-protected" data-roles="mestre,analista" data-tab="mb51">MB51</button>
+        <button class="tab-btn" data-tab="mb51">MB51</button>
         <button class="tab-btn" data-tab="relatorio">Relatório</button>
         <button class="tab-btn" data-tab="produtos-estrela">Produtos Estrela</button>
       </nav>
@@ -65,15 +26,6 @@
       <main>
         <section id="zles002" class="tab-panel active">
           <h2>Detalhes de Materiais</h2>
-
-          <div id="admin-panel" class="sub-card hidden">
-            <h3>Administração de usuários</h3>
-            <label>Promover usuário para analista
-              <select id="promote-user"></select>
-            </label>
-            <button id="promote-btn" type="button">Promover para analista</button>
-            <p id="admin-status"></p>
-          </div>
 
           <div class="sub-card">
             <label>
