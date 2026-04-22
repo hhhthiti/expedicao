@@ -3,8 +3,6 @@ const SUPABASE_KEY = "sb_publishable_rIcKdaflOvJ0DLTJDcOrxA_bpTGG2hA";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const STORAGE_KEY = "dts-store-v3";
-const USERS_KEY = "users-store-v1";
-const SESSION_KEY = "users-session-v1";
 
 const STAR_PRODUCTS = [
   ["20104425", "PANO SCOTT DURAMAX 58X03X08 BRANCO"],
@@ -57,8 +55,6 @@ const STATUS_BASE = {
 };
 
 let store = loadStore();
-let users = loadUsers();
-let currentUser = loadSession();
 
 const tabButtons = document.querySelectorAll(".tab-btn");
 const panels = document.querySelectorAll(".tab-panel");
@@ -79,106 +75,7 @@ function saveStore() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
 }
 
-function loadUsers() {
-  const raw = localStorage.getItem(USERS_KEY);
-  const parsed = raw ? JSON.parse(raw) : [];
-  const hasMaster = parsed.some((u) => u.role === "mestre");
-  if (!hasMaster) {
-    parsed.push({ username: "mestre", password: "123456", role: "mestre" });
-    localStorage.setItem(USERS_KEY, JSON.stringify(parsed));
-  }
-  return parsed;
-}
-
-function saveUsers() {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-function loadSession() {
-  const raw = localStorage.getItem(SESSION_KEY);
-  return raw ? JSON.parse(raw) : null;
-}
-
-function saveSession(user) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-}
-
-function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-}
-
-function setupAuth() {
-  const authScreen = document.getElementById("auth-screen");
-  const appShell = document.getElementById("app-shell");
-  const loginForm = document.getElementById("login-form");
-  const registerForm = document.getElementById("register-form");
-  const authStatus = document.getElementById("auth-status");
-
-  document.getElementById("show-login").addEventListener("click", () => {
-    loginForm.classList.remove("hidden");
-    registerForm.classList.add("hidden");
-  });
-
-  document.getElementById("show-register").addEventListener("click", () => {
-    registerForm.classList.remove("hidden");
-    loginForm.classList.add("hidden");
-  });
-
-  loginForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const username = document.getElementById("login-user").value.trim();
-    const password = document.getElementById("login-pass").value;
-    const found = users.find((u) => u.username === username && u.password === password);
-    if (!found) {
-      authStatus.textContent = "Usuário ou senha inválidos.";
-      return;
-    }
-    currentUser = { username: found.username, role: found.role };
-    saveSession(currentUser);
-    authStatus.textContent = "";
-    authScreen.classList.add("hidden");
-    appShell.classList.remove("hidden");
-    onAuthenticated();
-  });
-
-  registerForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const username = document.getElementById("register-user").value.trim();
-    const password = document.getElementById("register-pass").value;
-    if (!username || !password) {
-      authStatus.textContent = "Preencha usuário e senha.";
-      return;
-    }
-    if (users.some((u) => u.username === username)) {
-      authStatus.textContent = "Usuário já existe.";
-      return;
-    }
-    users.push({ username, password, role: "padrao" });
-    saveUsers();
-    authStatus.textContent = "Registro concluído. Agora faça login.";
-    registerForm.reset();
-    loginForm.classList.remove("hidden");
-    registerForm.classList.add("hidden");
-  });
-
-  document.getElementById("logout-btn").addEventListener("click", () => {
-    clearSession();
-    currentUser = null;
-    appShell.classList.add("hidden");
-    authScreen.classList.remove("hidden");
-  });
-
-  if (currentUser) {
-    authScreen.classList.add("hidden");
-    appShell.classList.remove("hidden");
-    onAuthenticated();
-  }
-}
-
-function onAuthenticated() {
-  document.getElementById("current-user").textContent = `Usuário: ${currentUser.username} (${currentUser.role})`;
-  applyRoleVisibility();
-  setupAdminPanel();
+function initApp() {
   bindAppEvents();
   renderResumoImportacao();
   pesquisarPorFinalDT();
@@ -186,51 +83,6 @@ function onAuthenticated() {
   renderDashboard();
   renderStatusPage();
   renderStarProducts();
-}
-
-function applyRoleVisibility() {
-  const role = currentUser?.role || "padrao";
-  document.querySelectorAll(".role-protected").forEach((el) => {
-    const allowed = String(el.dataset.roles || "").split(",").map((v) => v.trim());
-    el.classList.toggle("hidden", !allowed.includes(role));
-  });
-
-  if (document.querySelector(".tab-btn.active.hidden")) {
-    const first = document.querySelector(".tab-btn:not(.hidden)");
-    if (first) first.click();
-  }
-}
-
-function setupAdminPanel() {
-  const panel = document.getElementById("admin-panel");
-  const select = document.getElementById("promote-user");
-  const adminStatus = document.getElementById("admin-status");
-  if (currentUser?.role !== "mestre") {
-    panel.classList.add("hidden");
-    return;
-  }
-
-  panel.classList.remove("hidden");
-  select.innerHTML = "";
-  users.filter((u) => u.role !== "mestre" && u.role !== "analista").forEach((u) => {
-    const opt = document.createElement("option");
-    opt.value = u.username;
-    opt.textContent = u.username;
-    select.appendChild(opt);
-  });
-
-  document.getElementById("promote-btn").onclick = () => {
-    const username = select.value;
-    const found = users.find((u) => u.username === username);
-    if (!found) {
-      adminStatus.textContent = "Nenhum usuário padrão disponível para promoção.";
-      return;
-    }
-    found.role = "analista";
-    saveUsers();
-    adminStatus.textContent = `${username} promovido para analista.`;
-    setupAdminPanel();
-  };
 }
 
 let appEventsBound = false;
@@ -672,4 +524,4 @@ function renderStarProducts() {
   });
 }
 
-setupAuth();
+initApp();
